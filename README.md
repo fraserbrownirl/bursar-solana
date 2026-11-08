@@ -4,18 +4,19 @@
 
 Bursar pays x402 services on Solana mainnet from its own prepaid wallet. Before anything is signed, the model calls a RISC-V computer that lives inside its weights to decode the exact amount, token, recipient and fee. Bursar's rules then decide **APPROVE** or **STOP**. A hostile server can lie in its 402, swap the recipient, or change one character of an address, and Bursar still pays the right amount to the right party or refuses.
 
-▶ **Demo video:** `[https://youtu.be/z3yoF6aJjp4]`  ·  ✅ **Real mainnet payment:** [2MSFP4Bi…aXtecxaMuQ3hiCGo](https://explorer.solana.com/tx/2MSFP4BiqvhsxmwJUE9S2iqB8k2sZFAV7fK7rPCDKnxbPeSwfkFFQPp7QYuTHDtbiUNuBmT4aXtecxaMuQ3hiCGo)  ·  🧠 **Model:** [huggingface.co/frsrcom/bursar-9b](https://huggingface.co/frsrcom/bursar-9b)
+▶ **Demo video:** `[https://youtu.be/z3yoF6aJjp4]` ✅ ·  🧠 **Model:** [huggingface.co/frsrcom/bursar-9b](https://huggingface.co/frsrcom/bursar-9b)
 
 ---
 
 ## Why this matters
 
-Agents are starting to pay for things themselves, through x402 and agent wallets. Today that leaves two bad options:
+Few expected chat bots to replace Google search so quickly. Personal agents will replace blockchain wallets. Increasingly they are starting to pay for things themselves, through x402 and agent wallets but without Bursar they are prone to:
 
-- **A wallet asks you to sign everything.** That defeats the point of an agent, and people sign blind anyway.
-- **The agent signs on its own.** Language models guess at numbers. A guessed amount or address is lost money, and a prompt injection in a server's response can steer the payment.
+- **Prompt injections** in a server's response can steer the payment.
+- **Language models can guess at numbers.** and a wrong amount or address is lost money.
 
-Bursar takes a third path. **Exact checks happen inside the model, on your machine.** A small computer is compiled into the model's layers, so the check can't be swapped, downloaded or poisoned at runtime; it changes only with a new release of the weights. The model never sees the key, and a prepaid balance plus hard limits cap any mistake.
+Bursar takes a third path. **Exact checks happen inside the model, on your machine.** A small computer is compiled into the model's layers, so the check can't be swapped, downloaded or poisoned at runtime.
+
 
 ## What we proved today
 
