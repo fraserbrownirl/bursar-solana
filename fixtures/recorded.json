@@ -1,12 +1,5 @@
 [
   {
-    "cmd": "sol ata 6nWrWRTqrqpqbu5MsMW8mPDpZjKLwPb9Wf8BdMwNMWzK EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    "result": "error (too long)",
-    "ms": 65534,
-    "recorded": "2026-11-08",
-    "source": "localhost:8000 model ethereus-9b, bursar add of the citable payTo with the mint written out. Not cached."
-  },
-  {
     "cmd": "sol ui 5000 6",
     "result": "0.005",
     "ms": 3775,
