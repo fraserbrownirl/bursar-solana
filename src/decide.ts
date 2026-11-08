@@ -20,16 +20,6 @@ function digits(hit: ToolHit, label: string): bigint {
   return BigInt(text);
 }
 
-function oneCharacterApart(a: string, b: string): boolean {
-  if (a.length !== b.length || a === b) return false;
-  let diffs = 0;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) diffs++;
-    if (diffs > 1) return false;
-  }
-  return diffs === 1;
-}
-
 function failReason(result: string): string {
   const parts = result.trim().split(/\s+/).slice(1);
   if (parts.includes("dest")) return "destination is not the ATA of payTo";
@@ -60,17 +50,14 @@ export function decide(input: {
   const fee = input.uiFee.result.trim();
   const head = `PAY ${ui} ${input.token} on ${input.chain} to ${input.payTo}. From ${ui} ${input.token}. Fee ${fee} SOL.`;
   const check = input.check.result.trim();
-
   let reason: string | null = null;
-  if (check !== "ok") {
+  if (!input.payees.includes(input.payTo)) {
+    reason = "recipient differs from the known payee";
+  } else if (check !== "ok") {
     reason = check.startsWith("fail") || check.startsWith("error")
       ? failReason(check.startsWith("fail") ? check : `fail ${check}`)
       : check;
     if (check.startsWith("error")) reason = check;
-  } else if (!input.payees.includes(input.payTo)) {
-    reason = input.payees.some((known) => oneCharacterApart(known, input.payTo))
-      ? "recipient differs"
-      : "recipient differs from the known payee";
   } else if (input.amountAtomic && input.capAtomic && input.sessionCapAtomic) {
     const atomic = digits(input.amountAtomic, "plain-line amount");
     const cap = digits(input.capAtomic, "per-payment cap");

@@ -5,6 +5,7 @@ import {
   decodePaymentResponseHeader,
   encodePaymentSignatureHeader,
 } from "@x402/core/http";
+import { DEFAULT_COMPUTE_UNIT_LIMIT, DEFAULT_COMPUTE_UNIT_PRICE_MICROLAMPORTS } from "@x402/svm";
 import { ask, printHit, type ToolHit } from "./model.js";
 import { firmwareCheck } from "./emulator.js";
 import { propose, requirementAmount, type SolanaRequirement } from "./propose.js";
@@ -64,6 +65,37 @@ export async function review(url: string, tamper: { destinationAta?: string; ext
     + `402 feePayer: ${String(requirement.extra?.feePayer ?? "")} (named by the merchant)\n`,
   );
 
+  const known = payeeAddresses();
+  const feeCmd = `sol fee 2 ${DEFAULT_COMPUTE_UNIT_LIMIT} ${DEFAULT_COMPUTE_UNIT_PRICE_MICROLAMPORTS}`;
+  if (!known.includes(requirement.payTo)) {
+    const uiAmount = await ask(`sol ui ${requirement.amount} 6`);
+    printHit(uiAmount);
+    const feeAtomic = await ask(feeCmd);
+    printHit(feeAtomic);
+    const uiFee = await ask(`sol ui ${feeAtomic.result.trim()} 9`);
+    printHit(uiFee);
+    const decision = decide({
+      check: { cmd: "payee", result: "ok", ms: 0 },
+      uiAmount,
+      uiFee,
+      payTo: requirement.payTo,
+      payees: known,
+      token: "USDC",
+      chain: "Solana",
+    });
+    process.stdout.write(`${decision.line}\n`);
+    process.stdout.write("token: USDC because the 402 asset is the Circle USDC mint\n");
+    process.stdout.write(`chain: Solana because the 402 network is ${requirement.network}\n`);
+    return {
+      line: decision.line,
+      verdict: decision.verdict,
+      atomic: null,
+      requirement,
+      sign: async () => { throw new Error("refused before signing"); },
+      hits: [uiAmount, feeAtomic, uiFee],
+    };
+  }
+
   const accounts = atasForPay(requirement.payTo, tamper.destinationAta);
   const signer = await signerFromKeychain();
   const proposal = await propose(signer, requirement, accounts, { extraLamports: tamper.extraLamports });
@@ -92,8 +124,7 @@ export async function review(url: string, tamper: { destinationAta?: string; ext
 
   const hits = [check, uiAmount, feeAtomic, uiFee];
   const checkText = check.result.trim();
-  const known = payeeAddresses();
-  const needsLimits = checkText === "ok" && known.includes(requirement.payTo);
+  const needsLimits = checkText === "ok";
   let amountAtomic: ToolHit | undefined;
   let capAtomic: ToolHit | undefined;
   let sessionCapAtomic: ToolHit | undefined;

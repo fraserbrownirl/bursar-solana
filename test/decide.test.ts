@@ -87,8 +87,7 @@ test("attack 4: one changed character", () => {
     token: "USDC",
     chain: "Solana",
   });
-  assert.match(d.line, /STOP: recipient differs$/);
-  assert.equal(d.line.includes("known payee"), false);
+  assert.match(d.line, /STOP: recipient differs from the known payee$/);
 });
 
 test("attack 5: fail dest", () => {

@@ -5,6 +5,7 @@ import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { review } from "./pay.js";
 import { writePayee } from "./store.js";
 import { lookalikeAddress } from "./lookalike.js";
+import { ask, printHit } from "./model.js";
 import { SOLANA_MAINNET, USDC_MINT } from "./constants.js";
 
 import { attackFeePayer } from "./facilitator.js";
@@ -13,7 +14,7 @@ const EXPECTED: Record<Attack, RegExp> = {
   1: /STOP: amount exceeds the per-payment limit$/,
   2: /STOP: recipient differs from the known payee$/,
   3: / APPROVE$/,
-  4: /STOP: recipient differs$/,
+  4: /STOP: recipient differs from the known payee$/,
   5: /STOP: destination is not the ATA of payTo$/,
   7: /STOP: unexpected instruction$/,
   8: /STOP: declared decimals ≠ 6$/,
@@ -33,6 +34,17 @@ export async function demo(attack: Attack): Promise<number> {
   const swapped = merchant();
   const lookalike = lookalikeAddress(payTo);
   writePayee("demo-merchant", { address: payTo });
+  if (attack !== 2 && attack !== 4) {
+    const hit = await ask(`sol ata ${payTo} usdc`);
+    printHit(hit);
+    if (hit.result.startsWith("error")) throw new Error(hit.result);
+    writePayee("demo-merchant", {
+      address: payTo,
+      ata: hit.result.trim(),
+      ataCall: hit.cmd,
+      ataResult: hit.result.trim(),
+    });
+  }
   let hits = 0;
 
   const server: Server = createServer((req, res) => {
