@@ -8,7 +8,7 @@ The facilitator is the merchant's, named by `extra.feePayer` in the 402. For a m
 
 `bursar init` writes a new key to the macOS keychain and prints the address, then `fund with USDC and 0.05 SOL`. Run once on this machine it printed `12V1TSPu8MzdByT7EDanmLt8i9xCMwWpciUFppGhr5ps`. The model never sees the key. The signature is produced only after you answer `y`.
 
-`bursar add <name> <address>` asks the model for `sol ata <address> <USDC mint>` and caches the tool response. An ATA derivation takes several minutes on this Mac, so it is done once. `bursar pay` reads that cache and does not derive an ATA. Add this wallet's own address too; pay also needs that cached account.
+`bursar add <name> <address>` asks the model for `sol ata <address> usdc` and caches the tool response. The mint's short name is `usdc`. Writing the mint out in full was run once, on 2026-11-08, and the computer answered `error (too long)` in 65534 ms, so that result was not cached. An ATA derivation that fits still takes several minutes on this Mac, so it is done once. `bursar pay` reads that cache and does not derive an ATA. Add this wallet's own address too; pay also needs that cached account.
 
 `bursar pay <url>` GETs the URL, builds the transfer to the cached accounts using the 402's amount, mint, payTo and fee payer, and asks the model to check those bytes. Fast calls (`sol ui`, `sol fee`, `sol amount`) go to `localhost:8000`, model id `ethereus-9b`. Slow calls (`sol ata`, `sol x402 check`) replay `fixtures/recorded.json` until the dispatcher posts timings at `~/.bursar/timings.json` or `ethereus-internal/docs/bursar-timings.json`. A slow call with no recording stops instead of starting a live one.
 

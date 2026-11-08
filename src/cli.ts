@@ -6,7 +6,6 @@ import { ask, printHit } from "./model.js";
 import { pay } from "./pay.js";
 import { resetSession, writePayee, writeWallet } from "./store.js";
 import { demo } from "./demo.js";
-import { USDC_MINT } from "./constants.js";
 
 function usage(): never {
   process.stderr.write(
@@ -36,7 +35,7 @@ async function init(): Promise<void> {
 }
 
 async function add(name: string, wallet: string): Promise<void> {
-  const cmd = `sol ata ${wallet} ${USDC_MINT}`;
+  const cmd = `sol ata ${wallet} usdc`;
   const hit = await ask(cmd);
   printHit(hit);
   if (hit.result.startsWith("error")) process.exit(1);
