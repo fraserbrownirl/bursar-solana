@@ -70,8 +70,12 @@ const swapped = bs58.encode(nacl.sign.keyPair().publicKey);
 const lookalike = lookalikeAddress(merchant);
 const sourceAta = await ata(signer.address);
 
+const citableFeePayer = quoted.extra?.feePayer;
+if (typeof citableFeePayer !== "string" || citableFeePayer.length === 0) {
+  throw new Error("citable 402 did not name extra.feePayer");
+}
 const txs = [
-  await build("citable.run", signer, sourceAta, quoted.payTo, quoted.amount, dexter.feePayer),
+  await build("citable.run", signer, sourceAta, quoted.payTo, quoted.amount, citableFeePayer),
   await build("attack-1", signer, sourceAta, merchant, "10000000", dexter.feePayer),
   await build("attack-2", signer, sourceAta, swapped, "10000", dexter.feePayer),
   await build("attack-4", signer, sourceAta, lookalike, "10000", dexter.feePayer),
