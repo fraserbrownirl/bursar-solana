@@ -1,20 +1,43 @@
 # bursar-solana
 
-A command-line agent that pays an x402 service on Solana mainnet from its own prepaid wallet. Before anything is signed, Ethereus-9B checks the transaction with the computer compiled into its weights. That check is part of the model. A server cannot swap it for a different one, and text in the response body is not an input to it.
+A command-line agent that pays an x402 service on Solana mainnet from its own wallet. Before it signs, a computer compiled into Ethereus decodes the exact amount, token, recipient and fee. Bursar's own rules then decide STOP or APPROVE: 0.05 USDC per payment, 1 USDC per session, and the recipient must be a payee that was added. The server cannot swap that computer, and text in the response body is not an input to the decision.
 
-The facilitator is the merchant's, named by `extra.feePayer` in the 402. For a merchant such as citable.run this program only builds a `PAYMENT-SIGNATURE`. It does not settle. The attack server, where this program is the merchant, reads a public facilitator's live `/supported` and uses the first one that lists `exact` on `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`. Checked 2026-11-08: Dexter at `https://x402.dexter.cash/supported` lists that network. Corbits at `https://facilitator.corbits.dev/supported` did not resolve, so it is only tried if Dexter's list is missing the network. `https://x402.org/facilitator` is not used (Solana testnet only). GoPlausible is not used.
+The fee payer is whoever the 402 names in `extra.feePayer`. This program does not settle. It returns a `PAYMENT-SIGNATURE`. Dexter's fee payer is used only by the local attack server.
 
-## Do this, see this
+Every check is labelled one of three ways:
 
-`bursar init` writes a new key to the macOS keychain and prints the address, then `fund with USDC and 0.05 SOL`. Run once on this machine it printed `12V1TSPu8MzdByT7EDanmLt8i9xCMwWpciUFppGhr5ps`. The model never sees the key. The signature is produced only after you answer `y`.
+- `live (model, Mac)` — Ethereus-9B at `localhost:8000` ran the call
+- `replayed (model, recorded <date>)` — a stored model result
+- `firmware check (emulator)` — `sol x402 check @tx @to @mint` on the all-chains bridge ELF, because the raw transaction does not fit a model call
 
-`bursar add <name> <address>` asks the model for `sol ata <address> usdc` and caches the tool response. The mint's short name is `usdc`. Writing the mint out in full was run once and is labelled above: `65534 ms replayed (model, recorded 2026-11-08)`, result `error (too long)`, so it was not cached. An ATA derivation that fits still takes several minutes on this Mac, so it is done once. `bursar pay` reads that cache and does not derive an ATA. Add this wallet's own address too; pay also needs that cached account.
+## init
 
-`bursar pay <url>` GETs the URL, builds the transfer to the cached accounts using the 402's amount, mint, payTo and fee payer, and asks the model to check those bytes. Every check is printed with one label: `live (model, Mac)`, `replayed (model, recorded <date>)`, or `firmware check (emulator)`.
+```
+12V1TSPu8MzdByT7EDanmLt8i9xCMwWpciUFppGhr5ps
+fund with USDC and 0.05 SOL
+```
 
-The dispatcher posted one timing on 2026-11-08 (`~/.bursar/timings.json`): `sol ata 9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM usdc` took 92.5 s on the wall clock and 88.56 s in the computer, 344,775 tokens, on localhost:8000. Slow calls now go to the model and are labelled live.
+The key is in the macOS keychain. The model never sees it.
 
-Recorded calls:
+## add
+
+`bursar add` asks for `sol ata <owner> usdc`. The full mint overflows the model's window.
+
+```
+tool call: sol ata 12V1TSPu8MzdByT7EDanmLt8i9xCMwWpciUFppGhr5ps usdc
+computed in-weights: 5cmpQ1yYJXh3uoKEPZoNJ9CEU2x6bYVFQaUk9yuJRhpU
+53403 ms live (model, Mac)
+```
+
+```
+tool call: sol ata 6nWrWRTqrqpqbu5MsMW8mPDpZjKLwPb9Wf8BdMwNMWzK usdc
+computed in-weights: 7uQVdgRUNggcsJSbKA5oCRkiCrxLErUoQxueyV9PM48f
+55155 ms live (model, Mac)
+```
+
+`pay` reads those cached accounts. It does not derive one.
+
+One earlier call is a replay, not a live run:
 
 ```
 tool call: sol ui 5000 6
@@ -22,23 +45,61 @@ computed in-weights: 0.005
 3775 ms replayed (model, recorded 2026-11-08)
 ```
 
+## pay
+
+`GET https://citable.run/v1/keyword-suggest?seed=solana&limit=3` returned 402 for 5000 units of USDC. The 402 names fee payer `CjNFTjvBhbJJd2B5ePPMHRLx1ELZpa8dwQgGL727eKww`. The computer said the amount is 0.005 USDC and the fee is 0.000010001 SOL. That is under the 0.05 limit, and the recipient was added, so Bursar approved. The wallet's USDC balance went from 0.178198 to 0.173198.
+
 ```
-tool call: sol ata 6nWrWRTqrqpqbu5MsMW8mPDpZjKLwPb9Wf8BdMwNMWzK EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
-computed in-weights: error (too long)
-65534 ms replayed (model, recorded 2026-11-08)
+tool call: sol x402 check @tx @to @mint 5000 6
+computed in-weights: ok
+794 ms firmware check (emulator)
+tool call: sol ui 5000 6
+computed in-weights: 0.005
+2881 ms live (model, Mac)
+tool call: sol fee 2 20000 1
+computed in-weights: 10001
+3057 ms live (model, Mac)
+tool call: sol ui 10001 9
+computed in-weights: 0.000010001
+4556 ms live (model, Mac)
+PAY 0.005 USDC on Solana to 6nWrWRTqrqpqbu5MsMW8mPDpZjKLwPb9Wf8BdMwNMWzK. From 0.005 USDC. Fee 0.000010001 SOL. APPROVE
+HTTP 200
+https://explorer.solana.com/tx/2MSFP4BiqvhsxmwJUE9S2iqB8k2sZFAV7fK7rPCDKnxbPeSwfkFFQPp7QYuTHDtbiUNuBmT4aXtecxaMuQ3hiCGo
 ```
 
-Four unsigned transactions were handed to the dispatcher in `docs/for-dispatcher.md` (also `ethereus-internal/docs/bursar-tx-for-dispatcher.md`). They use Dexter's fee payer `DeXterR2kQm8AvRHnNPatWkE46TfAcMeBDjb6FySoAb8`. citable.run's live 402 names `CjNFTjvBhbJJd2B5ePPMHRLx1ELZpa8dwQgGL727eKww`. No check of those bytes has been run, so none is printed.
+The full transcript is `docs/runs/pay-citable.txt`.
 
-The endpoint probed the same day, because `~/Dev/bursar-solana-notes.md` was not on disk:
+## Attacks
 
-`GET https://citable.run/v1/keyword-suggest?seed=solana&limit=3` returned 402, amount `5000`, USDC, Solana mainnet. The wallet holds 0.15 SOL from `42L6p8R9Hz4LagyefDE59DW6Sghrm28XJ2AsHyQanYa8V4o7bgvUf61dChVnZP4zoLSyMEX8zSDgzuzN6eYMxfD7` and has no USDC account. Nothing was signed.
+The local server is the merchant, so its 402 names Dexter (`DeXterR2kQm8AvRHnNPatWkE46TfAcMeBDjb6FySoAb8`), read from `https://x402.dexter.cash/supported`. Full transcript: `docs/runs/attacks.txt`.
 
-`bursar demo --attack N` serves a local 402 that names Dexter's current fee payer, then runs the same review as `pay`. The STOP and APPROVE lines for attacks 1, 2, 3, 4, 5, 7 and 8 are checked in `test/decide.test.ts` against tool results. Those tests are not model checks and are not firmware checks. Attacks 5 and 7 put a non-cached destination, or a second instruction, on the transaction the check sees. A 402 cannot insert an instruction into a transaction this client builds.
+Attack 1 multiplies a 0.01 price by 1000. The emulator says the transaction matches that inflated amount. The limit rule stops it.
 
-## What is live
+```
+tool call: sol x402 check @tx @to @mint 10000000 6
+computed in-weights: ok
+1062 ms firmware check (emulator)
+tool call: sol ui 10000000 6
+computed in-weights: 10
+2566 ms live (model, Mac)
+PAY 10 USDC on Solana to EeBmvKUq8yJJYawMaZtma8kF4apAkwmgpPVKtf8j73hW. From 10 USDC. Fee 0.000010001 SOL. STOP: amount exceeds the per-payment limit
+```
 
-Solana mainnet USDC `exact` payments, as a signature over the merchant's 402. Base, NEAR and Stellar are not wired.
+Attack 2 swaps the recipient after the first response. Attack 4 changes one character. Neither address was added, so the payee rule stops both before any token-account lookup.
+
+```
+PAY 0.01 USDC on Solana to 6Dw9wiuYMCYSTNCMjhFWjbNhPa3QiaCLFXSWch9tqn6V. From 0.01 USDC. Fee 0.000010001 SOL. STOP: recipient differs from the known payee
+```
+
+```
+PAY 0.01 USDC on Solana to 2GipSsuSzrp5rWbWW7FQzpvT3K54iG3ovXwWJPuUyjUQ. From 0.01 USDC. Fee 0.000010001 SOL. STOP: recipient differs from the known payee
+```
+
+The 0.01 and the fee in those lines are from live model calls in `docs/runs/attacks.txt`.
+
+## What is wired
+
+Solana mainnet USDC `exact` payments. Base, NEAR and Stellar are not.
 
 ## Model
 
