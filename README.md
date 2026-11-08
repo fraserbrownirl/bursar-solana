@@ -1,6 +1,6 @@
 # Bursar
 
-**A payment agent that can't be talked into paying the wrong person, because it checks every payment with a computer compiled into its own weights.**
+**The wallet killer. A payment agent that handles blockchain payments and it can't be talked into paying the wrong person, because it checks every payment with a computer compiled into its own weights. Signing things we didn't understand was always the barrier that wallets would never overcome.**
 
 Bursar pays x402 services on Solana mainnet from its own prepaid wallet. Before anything is signed, the model calls a RISC-V computer that lives inside its weights to decode the exact amount, token, recipient and fee. Bursar's rules then decide **APPROVE** or **STOP**. A hostile server can lie in its 402, swap the recipient, or change one character of an address, and Bursar still pays the right amount to the right party or refuses.
 
