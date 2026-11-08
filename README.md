@@ -8,25 +8,33 @@ The facilitator is the merchant's, named by `extra.feePayer` in the 402. For a m
 
 `bursar init` writes a new key to the macOS keychain and prints the address, then `fund with USDC and 0.05 SOL`. Run once on this machine it printed `12V1TSPu8MzdByT7EDanmLt8i9xCMwWpciUFppGhr5ps`. The model never sees the key. The signature is produced only after you answer `y`.
 
-`bursar add <name> <address>` asks the model for `sol ata <address> usdc` and caches the tool response. The mint's short name is `usdc`. Writing the mint out in full was run once, on 2026-11-08, and the computer answered `error (too long)` in 65534 ms, so that result was not cached. An ATA derivation that fits still takes several minutes on this Mac, so it is done once. `bursar pay` reads that cache and does not derive an ATA. Add this wallet's own address too; pay also needs that cached account.
+`bursar add <name> <address>` asks the model for `sol ata <address> usdc` and caches the tool response. The mint's short name is `usdc`. Writing the mint out in full was run once and is labelled above: `65534 ms replayed (model, recorded 2026-11-08)`, result `error (too long)`, so it was not cached. An ATA derivation that fits still takes several minutes on this Mac, so it is done once. `bursar pay` reads that cache and does not derive an ATA. Add this wallet's own address too; pay also needs that cached account.
 
-`bursar pay <url>` GETs the URL, builds the transfer to the cached accounts using the 402's amount, mint, payTo and fee payer, and asks the model to check those bytes. Fast calls (`sol ui`, `sol fee`, `sol amount`) go to `localhost:8000`, model id `ethereus-9b`. Slow calls (`sol ata`, `sol x402 check`) replay `fixtures/recorded.json` until the dispatcher posts timings at `~/.bursar/timings.json` or `ethereus-internal/docs/bursar-timings.json`. A slow call with no recording stops instead of starting a live one.
+`bursar pay <url>` GETs the URL, builds the transfer to the cached accounts using the 402's amount, mint, payTo and fee payer, and asks the model to check those bytes. Every check is printed with one label: `live (model, Mac)`, `replayed (model, recorded <date>)`, or `firmware check (emulator)`.
 
-One recording is in the tree, from a live call on 2026-11-08:
+The dispatcher posted one timing on 2026-11-08 (`~/.bursar/timings.json`): `sol ata 9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM usdc` took 92.5 s on the wall clock and 88.56 s in the computer, 344,775 tokens, on localhost:8000. Slow calls now go to the model and are labelled live.
+
+Recorded calls:
 
 ```
 tool call: sol ui 5000 6
 computed in-weights: 0.005
-3775 ms recorded
+3775 ms replayed (model, recorded 2026-11-08)
 ```
 
-The server reported `usage.locals.wall_s` 3.775. No ATA or x402-check recording exists yet, so `add` and the in-weights check inside `pay` and `demo` are not live.
+```
+tool call: sol ata 6nWrWRTqrqpqbu5MsMW8mPDpZjKLwPb9Wf8BdMwNMWzK EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
+computed in-weights: error (too long)
+65534 ms replayed (model, recorded 2026-11-08)
+```
+
+Four unsigned transactions were handed to the dispatcher in `docs/for-dispatcher.md` (also `ethereus-internal/docs/bursar-tx-for-dispatcher.md`). They use Dexter's fee payer `DeXterR2kQm8AvRHnNPatWkE46TfAcMeBDjb6FySoAb8`. citable.run's live 402 names `CjNFTjvBhbJJd2B5ePPMHRLx1ELZpa8dwQgGL727eKww`. No check of those bytes has been run, so none is printed.
 
 The endpoint probed the same day, because `~/Dev/bursar-solana-notes.md` was not on disk:
 
-`GET https://citable.run/v1/keyword-suggest?seed=solana&limit=3` returned 402, amount `5000`, USDC, Solana mainnet. Building the unsigned transaction from that 402 took about 2 seconds of RPC and produced 496 bytes (command 1106 characters). It was not signed and not submitted. The wallet above has not been funded.
+`GET https://citable.run/v1/keyword-suggest?seed=solana&limit=3` returned 402, amount `5000`, USDC, Solana mainnet. The wallet holds 0.15 SOL from `42L6p8R9Hz4LagyefDE59DW6Sghrm28XJ2AsHyQanYa8V4o7bgvUf61dChVnZP4zoLSyMEX8zSDgzuzN6eYMxfD7` and has no USDC account. Nothing was signed.
 
-`bursar demo --attack N` serves a local 402 that names Dexter's current fee payer, then runs the same review as `pay`. The STOP and APPROVE lines for attacks 1, 2, 3, 4, 5, 7 and 8 are checked in `test/decide.test.ts` against tool results. They have not been run through the model. Attacks 5 and 7 put a non-cached destination, or a second instruction, on the transaction the check sees. A 402 cannot insert an instruction into a transaction this client builds.
+`bursar demo --attack N` serves a local 402 that names Dexter's current fee payer, then runs the same review as `pay`. The STOP and APPROVE lines for attacks 1, 2, 3, 4, 5, 7 and 8 are checked in `test/decide.test.ts` against tool results. Those tests are not model checks and are not firmware checks. Attacks 5 and 7 put a non-cached destination, or a second instruction, on the transaction the check sees. A 402 cannot insert an instruction into a transaction this client builds.
 
 ## What is live
 

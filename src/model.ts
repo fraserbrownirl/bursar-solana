@@ -4,9 +4,26 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MODEL_URL } from "./constants.js";
 
-export type ToolHit = { cmd: string; result: string; ms: number; recorded?: boolean };
+export type ToolHit = {
+  cmd: string;
+  result: string;
+  ms: number;
+  kind: "live" | "replayed" | "firmware";
+  recordedOn?: string;
+};
 
-export type Recording = { cmd: string; result: string; ms: number; source?: string };
+export type Recording = { cmd: string; result: string; ms: number; source?: string; recorded: string };
+
+/** The only labels a check may carry. */
+export function checkMark(hit: ToolHit): string {
+  if (hit.kind === "live") return `${hit.ms} ms live (model, Mac)`;
+  if (hit.kind === "replayed") {
+    if (!hit.recordedOn) throw new Error("replayed check is missing its recorded date");
+    return `${hit.ms} ms replayed (model, recorded ${hit.recordedOn})`;
+  }
+  if (hit.kind === "firmware") return `${hit.ms} ms firmware check (emulator)`;
+  throw new Error("check has no label");
+}
 
 type Completion = {
   choices?: { message?: {
@@ -58,7 +75,8 @@ export function recordings(): Recording[] {
 export function recordedHit(cmd: string): ToolHit | null {
   const found = recordings().find((item) => item.cmd === cmd);
   if (!found) return null;
-  return { cmd, result: found.result, ms: found.ms, recorded: true };
+  if (!found.recorded) throw new Error(`recording for ${cmd} has no date`);
+  return { cmd, result: found.result, ms: found.ms, kind: "replayed", recordedOn: found.recorded };
 }
 function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "content-type": "application/json" };
@@ -156,10 +174,9 @@ export async function ask(cmd: string): Promise<ToolHit> {
   let body = await response.json() as Completion;
   if (response.status === 202 && body.id) body = await pollJob(body.id);
   if (body.error?.message) throw new Error(body.error.message);
-  return { cmd, result: extract(body, cmd), ms: Date.now() - started };
+  return { cmd, result: extract(body, cmd), ms: Date.now() - started, kind: "live" };
 }
 
 export function printHit(hit: ToolHit): void {
-  const timing = hit.recorded ? `${hit.ms} ms recorded` : `${hit.ms} ms`;
-  process.stdout.write(`tool call: ${hit.cmd}\ncomputed in-weights: ${hit.result}\n${timing}\n`);
+  process.stdout.write(`tool call: ${hit.cmd}\ncomputed in-weights: ${hit.result}\n${checkMark(hit)}\n`);
 }

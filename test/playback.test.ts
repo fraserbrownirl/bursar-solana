@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { attackFeePayer, feePayerFromKinds } from "../src/facilitator.js";
-import { ask, isSlow, recordedHit, timingsPosted } from "../src/model.js";
+import { recordedHit } from "../src/model.js";
 import { atasFrom } from "../src/store.js";
 import { SOLANA_MAINNET } from "../src/constants.js";
 
@@ -13,32 +13,31 @@ test("the committed recording is the live sol ui call", () => {
   assert.ok(hit);
   assert.equal(hit.result, "0.005");
   assert.equal(hit.ms, 3775);
-  assert.equal(hit.recorded, true);
+  assert.equal(hit.kind, "replayed");
+  assert.equal(hit.recordedOn, "2026-11-08");
 });
 
-test("a slow call with no recording does not start a live request", async () => {
-  assert.equal(timingsPosted(), false);
-  assert.equal(isSlow("sol ata SomeWallet EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"), true);
-  await assert.rejects(
-    () => ask("sol ata SomeWallet EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
-    /no recorded response/,
-  );
+test("an unknown command has no recording to replay", () => {
+  assert.equal(recordedHit("sol ata not-recorded usdc"), null);
 });
 
-test("a slow call replays an exact recorded response", async () => {
+test("a stored response is labelled replayed", () => {
   const dir = mkdtempSync(join(tmpdir(), "bursar-rec-"));
   const path = join(dir, "recorded.json");
   writeFileSync(path, JSON.stringify([{
     cmd: "sol ata WalletMint USDC",
     result: "CachedAta111",
     ms: 180000,
+    recorded: "2026-11-08",
     source: "playback fixture for the test, not a model observation",
   }]));
   process.env.BURSAR_RECORDINGS = path;
   try {
-    const hit = await ask("sol ata WalletMint USDC");
+    const hit = recordedHit("sol ata WalletMint USDC");
+    assert.ok(hit);
     assert.equal(hit.result, "CachedAta111");
-    assert.equal(hit.recorded, true);
+    assert.equal(hit.kind, "replayed");
+    assert.equal(hit.recordedOn, "2026-11-08");
     assert.equal(hit.ms, 180000);
   } finally {
     delete process.env.BURSAR_RECORDINGS;
