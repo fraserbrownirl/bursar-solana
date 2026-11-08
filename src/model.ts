@@ -32,7 +32,6 @@ type Completion = {
     reasoning_content?: string | null;
     tool_calls?: { function?: { arguments?: string } }[];
   } }[];
-  ethereus?: { tool_messages?: { content?: string }[] };
   error?: { message?: string };
   id?: string;
   status?: string;
@@ -43,15 +42,11 @@ export function isSlow(cmd: string): boolean {
   return cmd.startsWith("sol ata ") || cmd.startsWith("sol x402 check ");
 }
 
-/** Live slow calls wait until the dispatcher posts timings in one of these places. */
+/** Live slow calls wait until timings are posted to BURSAR_TIMINGS or noted in BURSAR_LOG (both default to ~/.bursar/). */
 export function timingsPosted(): boolean {
-  const paths = [
-    process.env.BURSAR_TIMINGS,
-    join(homedir(), ".bursar", "timings.json"),
-    "/Users/fraserbrown/Dev/ethereus-internal/docs/bursar-timings.json",
-  ].filter((path): path is string => Boolean(path));
-  if (paths.some((path) => existsSync(path))) return true;
-  const log = "/Users/fraserbrown/Dev/ethereus-internal/docs/dispatcher-log.md";
+  const timings = process.env.BURSAR_TIMINGS ?? join(homedir(), ".bursar", "timings.json");
+  if (existsSync(timings)) return true;
+  const log = process.env.BURSAR_LOG ?? join(homedir(), ".bursar", "dispatcher-log.md");
   if (!existsSync(log)) return false;
   return readFileSync(log, "utf8").split("\n").some((line) => line.includes("bursar timings"));
 }
@@ -81,38 +76,19 @@ export function recordedHit(cmd: string): ToolHit | null {
 }
 function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "content-type": "application/json" };
-  const key = process.env.BURSAR_MODEL_KEY ?? process.env.ETHEREUS_API_KEY;
+  const key = process.env.BURSAR_MODEL_KEY;
   if (key) headers.authorization = `Bearer ${key}`;
   return headers;
 }
 
+/** The message field where the server returns the tool call and its <tool_response>. */
+export const TOOL_FIELD = "reasoning_content";
+
 function extract(body: Completion, cmd: string): string {
-  const message = body.choices?.[0]?.message;
-  const calls = message?.tool_calls ?? [];
-  const tools = body.ethereus?.tool_messages ?? [];
-  for (let i = 0; i < calls.length; i++) {
-    let args: { cmd?: string } = {};
-    try {
-      args = JSON.parse(calls[i]?.function?.arguments ?? "{}") as { cmd?: string };
-    } catch {
-      args = {};
-    }
-    const got = (args.cmd ?? "").trim();
-    const head = cmd.split(" ").slice(0, 3).join(" ");
-    if (got === cmd || got.startsWith(head)) {
-      const content = tools[i]?.content?.trim();
-      if (content) return content;
-    }
-  }
-  const blobs = [message?.content, message?.reasoning_content, tools[0]?.content]
-    .filter((part): part is string => typeof part === "string");
-  for (const text of blobs) {
-    const matched = text.match(/<tool_response>\n?([\s\S]*?)\n?<\/tool_response>/);
-    if (matched?.[1]?.trim()) return matched[1].trim();
-  }
-  if (tools.length === 1 && tools[0]?.content?.trim()) return tools[0].content.trim();
-  const preview = blobs.join("\n").slice(0, 500);
-  throw new Error(`no in-weights tool result for ${cmd}${preview ? `\n${preview}` : ""}`);
+  const text = body.choices?.[0]?.message?.[TOOL_FIELD] ?? "";
+  const matched = text.match(/<tool_response>\n?([\s\S]*?)\n?<\/tool_response>/);
+  if (matched?.[1]?.trim()) return matched[1].trim();
+  throw new Error(`no in-weights tool result for ${cmd}${text ? `\n${text.slice(0, 500)}` : ""}`);
 }
 
 async function post(body: unknown): Promise<Response> {
@@ -148,15 +124,15 @@ export async function ask(cmd: string): Promise<ToolHit> {
     if (!hit) {
       throw new Error(
         "this call is slow (sol ata or sol x402 check) and has no recorded response. "
-        + "Live calls start when the dispatcher posts timings to ~/.bursar/timings.json "
-        + "or docs/bursar-timings.json.",
+        + "Live calls start when timings are posted to BURSAR_TIMINGS (default ~/.bursar/timings.json) "
+        + "or noted in BURSAR_LOG (default ~/.bursar/dispatcher-log.md).",
       );
     }
     return hit;
   }
   const started = Date.now();
   const payload = {
-    model: "ethereus-9b",
+    model: "bursar-9b",
     max_tokens: 262144,
     messages: [{
       role: "user",

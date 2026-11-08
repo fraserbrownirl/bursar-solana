@@ -4,6 +4,6 @@
     "result": "0.005",
     "ms": 3775,
     "recorded": "2026-11-08",
-    "source": "localhost:8000 model ethereus-9b, usage.locals.wall_s 3.775, tool_response in reasoning_content"
+    "source": "localhost:8000 model bursar-9b, usage.locals.wall_s 3.775, tool_response in reasoning_content"
   }
 ]

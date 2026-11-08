@@ -1,14 +1,18 @@
 import { spawnSync } from "node:child_process";
+import { join } from "node:path";
 import bs58 from "bs58";
 import type { ToolHit } from "./model.js";
 
-const PYTHON = process.env.BURSAR_PYTHON
-  ?? "/Users/fraserbrown/Dev/ethereus/experimental/riscv/.venv/bin/python";
-const RISC = "/Users/fraserbrown/Dev/ethereus/experimental/riscv";
+/** The RISC-V reference emulator checkout. Its Python lives in .venv unless BURSAR_PYTHON says otherwise. */
+function emulatorDir(): string {
+  const dir = process.env.BURSAR_EMULATOR;
+  if (!dir) throw new Error("set BURSAR_EMULATOR to the RISC-V reference emulator directory");
+  return dir;
+}
 
-const PROGRAM = `
+const program = (dir: string) => `
 import json, sys, time
-sys.path.insert(0, ${JSON.stringify(RISC)})
+sys.path.insert(0, ${JSON.stringify(dir)})
 from chipformer.rv import eth, bridge as BR
 req = json.load(sys.stdin)
 files = {"tx": "0x" + req["tx"], "to": req["toHex"], "mint": req["mintHex"]}
@@ -30,7 +34,9 @@ json.dump({"cmd": cmd, "result": result, "ms": int((time.time() - started) * 100
 /** The full transaction does not fit a model call. The bridge emulator reads it from files. */
 export function firmwareCheck(txHex: string, payTo: string, mint: string, amount: string, decimals: number): ToolHit {
   const started = Date.now();
-  const run = spawnSync(PYTHON, ["-c", PROGRAM], {
+  const dir = emulatorDir();
+  const python = process.env.BURSAR_PYTHON ?? join(dir, ".venv", "bin", "python");
+  const run = spawnSync(python, ["-c", program(dir)], {
     input: JSON.stringify({
       tx: txHex,
       toHex: Buffer.from(bs58.decode(payTo)).toString("hex"),

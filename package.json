@@ -2,7 +2,7 @@
   "name": "bursar-solana",
   "version": "0.1.0",
   "private": false,
-  "description": "A command-line agent that pays an x402 Solana mainnet service only after Ethereus checks the transaction in its weights.",
+  "description": "A command-line agent that pays x402 services on Solana mainnet only after Bursar-9B checks the payment in its weights.",
   "type": "module",
   "bin": {
     "bursar": "./dist/cli.js"
