@@ -10,12 +10,12 @@ Bursar pays x402 services on Solana mainnet from its own prepaid wallet. Before 
 
 ## Why this matters
 
-Few expected chat bots to replace Google search so quickly. Personal agents will replace blockchain wallets. Increasingly they are starting to pay for things themselves, through x402 and agent wallets but without Bursar they are prone to:
+Few expected chat bots to replace Google search so quickly. We see a similar transition to how finances are managed. Personal agents will replace blockchain wallets removing the friction they caused. Increasingly they are starting to pay for things themselves, through x402 and agent wallets but without Bursar they are prone to:
 
 - **Prompt injections** in a server's response can steer the payment.
 - **Language models can guess at numbers.** and a wrong amount or address is lost money.
 
-Bursar takes a third path. **Exact checks happen inside the model, on your machine.** A small computer is compiled into the model's layers, so the check can't be swapped, downloaded or poisoned at runtime.
+Bursar takes a third path. **Exact checks happen inside the model, on your machine.** A small computer is compiled into the model's layers, so the check can't be swapped, downloaded or poisoned at runtime. 
 
 
 ## What we proved today
