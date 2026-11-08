@@ -1,0 +1,8 @@
+[
+  {
+    "cmd": "sol ui 5000 6",
+    "result": "0.005",
+    "ms": 3775,
+    "source": "localhost:8000 model ethereus-9b, 2026-11-08, usage.locals.wall_s 3.775, tool_response in reasoning_content"
+  }
+]

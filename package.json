@@ -1,0 +1,38 @@
+{
+  "name": "bursar-solana",
+  "version": "0.1.0",
+  "private": false,
+  "description": "A command-line agent that pays an x402 Solana mainnet service only after Ethereus checks the transaction in its weights.",
+  "type": "module",
+  "bin": {
+    "bursar": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "tsx --test test/decide.test.ts",
+    "bursar": "tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@solana-program/compute-budget": "^0.20.0",
+    "@solana-program/system": "^0.16.0",
+    "@solana-program/token": "^0.18.0",
+    "@solana-program/token-2022": "^0.20.1",
+    "@solana/kit": "^8.6.0",
+    "@x402/core": "^2.30.0",
+    "@x402/express": "^2.30.0",
+    "@x402/svm": "^2.30.0",
+    "bs58": "^6.0.0",
+    "express": "^5.3.0",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
