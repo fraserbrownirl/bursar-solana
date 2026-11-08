@@ -6,6 +6,7 @@ import {
   encodePaymentSignatureHeader,
 } from "@x402/core/http";
 import { ask, printHit, type ToolHit } from "./model.js";
+import { firmwareCheck } from "./emulator.js";
 import { propose, requirementAmount, type SolanaRequirement } from "./propose.js";
 import { decide } from "./decide.js";
 import { atasForPay, payeeAddresses, readSession, writeSession } from "./store.js";
@@ -74,8 +75,13 @@ export async function review(url: string, tamper: { destinationAta?: string; ext
   }
   process.stdout.write(`unsigned transaction: ${proposal.unsignedHex.length / 2} bytes\n`);
 
-  const checkCmd = `sol x402 check 0x${proposal.unsignedHex} ${requirement.payTo} ${requirement.asset} ${requirement.amount} ${proposal.checkDecimals}`;
-  const check = await ask(checkCmd);
+  const check = firmwareCheck(
+    proposal.unsignedHex,
+    requirement.payTo,
+    requirement.asset,
+    requirement.amount,
+    proposal.checkDecimals,
+  );
   printHit(check);
   const uiAmount = await ask(`sol ui ${requirement.amount} ${proposal.mintDecimals}`);
   printHit(uiAmount);
