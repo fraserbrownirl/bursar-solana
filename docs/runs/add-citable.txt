@@ -1,0 +1,3 @@
+tool call: sol ata 6nWrWRTqrqpqbu5MsMW8mPDpZjKLwPb9Wf8BdMwNMWzK usdc
+computed in-weights: 7uQVdgRUNggcsJSbKA5oCRkiCrxLErUoQxueyV9PM48f
+55155 ms live (model, Mac)
