@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MODEL_URL } from "./constants.js";
+import { markLine } from "./color.js";
 
 export type ToolHit = {
   cmd: string;
@@ -178,5 +179,5 @@ export async function ask(cmd: string): Promise<ToolHit> {
 }
 
 export function printHit(hit: ToolHit): void {
-  process.stdout.write(`tool call: ${hit.cmd}\ncomputed in-weights: ${hit.result}\n${checkMark(hit)}\n`);
+  process.stdout.write(`tool call: ${hit.cmd}\ncomputed in-weights: ${hit.result}\n${markLine(checkMark(hit))}\n`);
 }

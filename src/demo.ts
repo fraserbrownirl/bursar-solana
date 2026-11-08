@@ -3,7 +3,8 @@ import nacl from "tweetnacl";
 import bs58 from "bs58";
 import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { review } from "./pay.js";
-import { writePayee } from "./store.js";
+import { readPayees, writePayee } from "./store.js";
+import { decodePaymentRequiredHeader } from "@x402/core/http";
 import { lookalikeAddress } from "./lookalike.js";
 import { ask, printHit } from "./model.js";
 import { SOLANA_MAINNET, USDC_MINT } from "./constants.js";
@@ -30,11 +31,15 @@ export async function demo(attack: Attack): Promise<number> {
   const picked = await attackFeePayer();
   process.stdout.write(`attack facilitator: ${picked.name} ${picked.feePayer}\nfrom ${picked.url}\n`);
   const payer = picked.feePayer;
-  const payTo = merchant();
+  // One demo merchant across runs, so its ATA lookup happens once and is then cached.
+  const cached = readPayees()["demo-merchant"];
+  const payTo = cached?.address ?? merchant();
   const swapped = merchant();
   const lookalike = lookalikeAddress(payTo);
-  writePayee("demo-merchant", { address: payTo });
-  if (attack !== 2 && attack !== 4) {
+  if (!cached) writePayee("demo-merchant", { address: payTo });
+  if (attack !== 2 && attack !== 4 && cached?.ata) {
+    process.stdout.write(`payee ATA: ${cached.ata} (cached from ${cached.ataCall ?? "bursar add"})\n`);
+  } else if (attack !== 2 && attack !== 4) {
     const hit = await ask(`sol ata ${payTo} usdc`);
     printHit(hit);
     if (hit.result.startsWith("error")) throw new Error(hit.result);
@@ -91,13 +96,19 @@ export async function demo(attack: Attack): Promise<number> {
   const port = (server.address() as { port: number }).port;
   const url = `http://127.0.0.1:${port}/paid`;
   try {
-    if (attack === 2) await fetch(url);
+    if (attack === 2) {
+      const honest = await fetch(url);
+      const doc = decodePaymentRequiredHeader(honest.headers.get("payment-required") ?? "") as {
+        accepts?: { payTo?: string }[];
+      };
+      process.stdout.write(`first 402 payTo: ${doc.accepts?.[0]?.payTo ?? ""} (honest)\n`);
+    }
     const tamper = attack === 5
       ? { destinationAta: swapped }
       : attack === 7
         ? { extraLamports: true }
         : {};
-    const result = await review(url, tamper);
+    const result = await review(url, tamper, attack === 4 ? { knownPayee: payTo } : {});
     const ok = EXPECTED[attack].test(result.line);
     process.stdout.write(ok ? `attack ${attack} refused as expected\n` : `attack ${attack} unexpected line\n`);
     return ok ? 0 : 1;

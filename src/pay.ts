@@ -10,6 +10,7 @@ import { ask, printHit, type ToolHit } from "./model.js";
 import { firmwareCheck } from "./emulator.js";
 import { propose, requirementAmount, type SolanaRequirement } from "./propose.js";
 import { decide } from "./decide.js";
+import { boldRed, verdictLine } from "./color.js";
 import { atasForPay, payeeAddresses, readSession, writeSession } from "./store.js";
 import { signerFromKeychain } from "./keychain.js";
 import { PER_PAYMENT_UI, SESSION_UI, SOLANA_MAINNET, USDC_DECIMALS, USDC_MINT } from "./constants.js";
@@ -49,7 +50,11 @@ async function confirm(): Promise<boolean> {
   return answer === "y";
 }
 
-export async function review(url: string, tamper: { destinationAta?: string; extraLamports?: boolean } = {}): Promise<Review> {
+export async function review(
+  url: string,
+  tamper: { destinationAta?: string; extraLamports?: boolean } = {},
+  show: { knownPayee?: string } = {},
+): Promise<Review> {
   const first = await fetch(url);
   const body = await first.text();
   const encoded = first.headers.get("payment-required");
@@ -60,7 +65,9 @@ export async function review(url: string, tamper: { destinationAta?: string; ext
   const doc = decodePaymentRequiredHeader(encoded) as RequiredDoc;
   const requirement = selectSolanaUsdc(doc);
   process.stdout.write(
-    `402 asset: ${requirement.asset}\n402 payTo: ${requirement.payTo}\n402 amount: ${requirement.amount}\n`
+    `402 asset: ${requirement.asset}\n`
+    + (show.knownPayee ? `known payee: ${show.knownPayee}\n` : "")
+    + `402 payTo: ${requirement.payTo}\n402 amount: ${requirement.amount}\n`
     + `402 network: ${requirement.network}\n`
     + `402 feePayer: ${String(requirement.extra?.feePayer ?? "")} (named by the merchant)\n`,
   );
@@ -83,7 +90,7 @@ export async function review(url: string, tamper: { destinationAta?: string; ext
       token: "USDC",
       chain: "Solana",
     });
-    process.stdout.write(`${decision.line}\n`);
+    process.stdout.write(`${verdictLine(decision.line)}\n`);
     process.stdout.write("token: USDC because the 402 asset is the Circle USDC mint\n");
     process.stdout.write(`chain: Solana because the 402 network is ${requirement.network}\n`);
     return {
@@ -151,7 +158,7 @@ export async function review(url: string, tamper: { destinationAta?: string; ext
     sessionCapAtomic,
     spentAtomic: BigInt(readSession().spentAtomic),
   });
-  process.stdout.write(`${decision.line}\n`);
+  process.stdout.write(`${verdictLine(decision.line)}\n`);
   process.stdout.write("token: USDC because the 402 asset is the Circle USDC mint\n");
   process.stdout.write(`chain: Solana because the 402 network is ${requirement.network}\n`);
 
@@ -179,7 +186,7 @@ export async function pay(url: string): Promise<number> {
   const doc = decodePaymentRequiredHeader(encoded) as RequiredDoc;
   const requirement = selectSolanaUsdc(doc);
   if (requirement.payTo !== reviewed.requirement.payTo || requirement.amount !== reviewed.requirement.amount) {
-    process.stdout.write("STOP: the 402 changed between the check and the signature\n");
+    process.stdout.write(`${boldRed("STOP: the 402 changed between the check and the signature")}\n`);
     return 2;
   }
   const payload = {
