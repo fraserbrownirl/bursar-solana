@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "tsx --test test/decide.test.ts",
+    "test": "tsx --test test/decide.test.ts test/guard.test.ts test/review.test.ts",
     "bursar": "tsx src/cli.ts"
   },
   "engines": {

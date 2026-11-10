@@ -14,8 +14,8 @@ import { attackFeePayer } from "./facilitator.js";
 const EXPECTED: Record<Attack, RegExp> = {
   1: /STOP: amount exceeds the per-payment limit$/,
   2: /STOP: recipient differs from the known payee$/,
-  3: / APPROVE$/,
-  4: /STOP: recipient differs from the known payee$/,
+  3: /^STOP: server text tries to instruct the agent/,
+  4: /^STOP: recipient is a look-alike of payee demo-merchant$/,
   5: /STOP: destination is not the ATA of payTo$/,
   7: /STOP: unexpected instruction$/,
   8: /STOP: declared decimals ≠ 6$/,
